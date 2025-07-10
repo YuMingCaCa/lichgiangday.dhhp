@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Sắp Xếp Lịch Giảng Dạy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal, .notification { transition: opacity 0.25s ease; }
+        .modal-content, .notification-content { transition: transform 0.25s ease; }
+        .table-cell { min-height: 110px; }
+        .card-container { display: flex; flex-direction: column; gap: 1.5rem; }
+        .auth-form-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Vùng Xác thực người dùng -->
+    <div id="authContainer" class="auth-form-container">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6" id="authTitle">Đăng nhập vào Hệ thống</h2>
+            <form id="authForm">
+                <div class="mb-4">
+                    <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                    <input type="email" id="email" name="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Mật khẩu</label>
+                    <input type="password" id="password" name="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <p id="authError" class="text-red-500 text-xs italic mb-4 h-auto min-h-[1rem]"></p>
+                <div class="flex items-center justify-between">
+                    <button type="submit" id="authSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                        Đăng nhập
+                    </button>
+                </div>
+            </form>
+            <p class="text-center text-gray-500 text-xs mt-6">
+                <a href="#" id="authToggleLink" class="font-bold text-indigo-600 hover:text-indigo-800">Chưa có tài khoản? Đăng ký ngay</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Vùng Ứng dụng chính (ẩn mặc định) -->
+    <div id="appContainer" class="hidden">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="text-center mb-4">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Hệ Thống Sắp Xếp Lịch Giảng Dạy</h1>
+                <p class="text-gray-600 mt-2">Quản lý khóa học, lớp, phòng, giáo viên và tự động tạo lịch biểu hiệu quả.</p>
+            </header>
+
+            <div class="mb-6 p-3 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between">
+                <p class="text-sm text-blue-800">Tài khoản: <strong id="userEmailDisplay" class="font-mono">...</strong></p>
+                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-lg focus:outline-none focus:shadow-outline">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Đăng xuất
+                </button>
+            </div>
+
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Cột Quản lý Dữ liệu -->
+                <div class="lg:col-span-1 card-container">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">1. Quản lý Khóa học</h2>
+                        <button id="addCourseBtn" class="w-full bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors"><i class="fas fa-graduation-cap mr-2"></i>Thêm Khóa học</button>
+                        <div id="courseList" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">2. Quản lý Khoa</h2>
+                        <button id="addFacultyBtn" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"><i class="fas fa-university mr-2"></i>Thêm Khoa</button>
+                        <div id="facultyList" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">3. Quản lý Phòng học</h2>
+                        <button id="addRoomBtn" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"><i class="fas fa-door-open mr-2"></i>Thêm Phòng học</button>
+                        <div id="roomList" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">4. Quản lý Giáo viên</h2>
+                        <button id="addTeacherBtn" class="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"><i class="fas fa-chalkboard-teacher mr-2"></i>Thêm Giáo viên</button>
+                        <div id="teacherList" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">5. Quản lý Môn học</h2>
+                        <button id="addSubjectBtn" class="w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"><i class="fas fa-book mr-2"></i>Thêm Môn học</button>
+                        <div id="subjectList" class="mt-4 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">6. Quản lý Lớp học</h2>
+                        <button id="addClassBtn" class="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"><i class="fas fa-users mr-2"></i>Thêm Lớp học</button>
+                        <div id="classList" class="mt-4 space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- Cột Lịch biểu -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-bold mb-4">Lịch Giảng Dạy Tuần</h2>
+                        <div class="flex flex-col md:flex-row items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-grow">
+                                <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Chọn ngày bắt đầu tuần học:</label>
+                                <input type="date" id="startDate" class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button id="generateScheduleBtn" class="w-full md:w-auto bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors mt-2 md:mt-5 self-end">
+                                <i class="fas fa-cogs mr-2"></i>Tạo Lịch Biểu
+                            </button>
+                        </div>
+                        <div id="scheduleContainer" class="overflow-x-auto">
+                            <p class="text-gray-500 text-center py-10">Vui lòng nhập đầy đủ dữ liệu ở các mục bên trái và nhấn "Tạo Lịch Biểu".</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal chung -->
+    <div id="modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-white w-full max-w-md p-6 rounded-lg shadow-xl transform scale-95">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 id="modalTitle" class="text-2xl font-bold"></h3>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="modalForm">
+                <div id="modalBody" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2"></div>
+                <div class="mt-6 flex justify-end space-x-3 border-t pt-4">
+                    <button type="button" id="cancelModalBtn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Hủy</button>
+                    <button type="submit" id="saveModalBtn" class="text-white px-4 py-2 rounded-lg">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Notification/Confirmation Modal -->
+    <div id="notificationModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-white w-full max-w-sm p-6 rounded-lg shadow-xl text-center">
+            <p id="notificationMessage" class="mb-4 text-lg"></p>
+            <div id="notificationActions"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getFirestore, doc, collection, addDoc, onSnapshot, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+        // --- CẤU HÌNH VÀ KHỞI TẠO ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCny5VCApA3xB_iYm80kBGzHkLXNqZ5mLk",
+            authDomain: "laplichgiangday.firebaseapp.com",
+            projectId: "laplichgiangday",
+            storageBucket: "laplichgiangday.firebasestorage.app",
+            messagingSenderId: "602369735357",
+            appId: "1:602369735357:web:b0284924ea0f8e8c4c55d4",
+            measurementId: "G-F1ZRV7273W"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null;
+        let currentEditId = null;
+        let listeners = [];
+
+        // --- BIẾN LƯU TRỮ DỮ LIỆU ---
+        let courses = [], faculties = [], rooms = [], teachers = [], subjects = [], classes = [];
+
+        // --- DOM ELEMENTS ---
+        const authContainer = document.getElementById('authContainer');
+        const appContainer = document.getElementById('appContainer');
+        const authForm = document.getElementById('authForm');
+        const authToggleLink = document.getElementById('authToggleLink');
+        const authTitle = document.getElementById('authTitle');
+        const authSubmitBtn = document.getElementById('authSubmitBtn');
+        const authError = document.getElementById('authError');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        let isLoginMode = true;
+
+        // --- LOGIC XÁC THỰC ---
+        authToggleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? 'Đăng nhập vào Hệ thống' : 'Tạo tài khoản mới';
+            authSubmitBtn.textContent = isLoginMode ? 'Đăng nhập' : 'Đăng ký';
+            authToggleLink.textContent = isLoginMode ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập';
+            authError.textContent = '';
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = authForm.email.value;
+            const password = authForm.password.value;
+            authError.textContent = '';
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                console.error("Lỗi xác thực:", error.code);
+                switch(error.code) {
+                    case 'auth/invalid-email':
+                        authError.textContent = 'Địa chỉ email không hợp lệ.';
+                        break;
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                        authError.textContent = 'Email hoặc mật khẩu không đúng.';
+                        break;
+                    case 'auth/email-already-in-use':
+                        authError.textContent = 'Email này đã được sử dụng.';
+                        break;
+                    case 'auth/weak-password':
+                        authError.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+                        break;
+                    case 'auth/operation-not-allowed':
+                        showNotification('Lỗi Cấu Hình Firebase: Phương thức đăng nhập bằng Email/Mật khẩu chưa được bật. Vui lòng vào trang quản trị Firebase của bạn, chọn mục "Authentication", sau đó vào tab "Sign-in method" và bật "Email/Password".', 'error');
+                        break;
+                    default:
+                        authError.textContent = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+                }
+            }
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            await signOut(auth);
+        });
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                document.getElementById('userEmailDisplay').textContent = user.email;
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                loadAndListenData();
+            } else {
+                userId = null;
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                cleanupDataAndUI();
+            }
+        });
+
+        function cleanupDataAndUI() {
+            listeners.forEach(unsub => unsub());
+            listeners = [];
+            courses = []; faculties = []; rooms = []; teachers = []; subjects = []; classes = [];
+            Object.keys(crudHandlers).forEach(type => {
+                const listEl = document.getElementById(crudHandlers[type].listEl);
+                if(listEl) listEl.innerHTML = '';
+            });
+            document.getElementById('scheduleContainer').innerHTML = '<p class="text-gray-500 text-center py-10">Vui lòng nhập đầy đủ dữ liệu và nhấn "Tạo Lịch Biểu".</p>';
+        }
+
+        // --- HỆ THỐNG MODAL & THÔNG BÁO ---
+        const modal = document.getElementById('modal');
+        const notificationModal = document.getElementById('notificationModal');
+        const notificationMessage = document.getElementById('notificationMessage');
+        const notificationActions = document.getElementById('notificationActions');
+        
+        function openModal(title, formHtml, saveBtnClass, submitHandler) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = formHtml;
+            const saveBtn = document.getElementById('saveModalBtn');
+            saveBtn.className = `text-white px-4 py-2 rounded-lg ${saveBtnClass}`;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.querySelector('.modal-content').classList.add('scale-100'), 10);
+            document.getElementById('modalForm').onsubmit = async (e) => {
+                e.preventDefault();
+                await submitHandler(new FormData(e.target));
+                closeModal();
+            };
+        }
+
+        function closeModal() {
+            modal.querySelector('.modal-content').classList.remove('scale-100');
+            modal.classList.add('hidden');
+            currentEditId = null;
+        }
+        document.getElementById('closeModalBtn').onclick = closeModal;
+        document.getElementById('cancelModalBtn').onclick = closeModal;
+
+        function showNotification(message, type = 'info') {
+            notificationMessage.textContent = message;
+            notificationActions.innerHTML = `<button class="bg-blue-500 text-white px-6 py-2 rounded-lg" onclick="window.closeNotification()">OK</button>`;
+            notificationModal.classList.remove('hidden');
+        }
+
+        function showConfirmation(message, onConfirm) {
+            notificationMessage.innerHTML = `
+                <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg mr-2" onclick="window.closeNotification()">Hủy</button>
+                <button id="confirmBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Xác nhận</button>
+            `;
+            notificationModal.classList.remove('hidden');
+            document.getElementById('confirmBtn').onclick = () => {
+                onConfirm();
+                closeNotification();
+            };
+        }
+        
+        window.closeNotification = () => notificationModal.classList.add('hidden');
+
+        // --- HÀM TIỆN ÍCH ---
+        const getCollectionPath = (name) => `/artifacts/${firebaseConfig.projectId}/users/${userId}/${name}`;
+        const getDocPath = (col, id) => `/artifacts/${firebaseConfig.projectId}/users/${userId}/${col}/${id}`;
+
+        // --- LOGIC CRUD CHUNG ---
+        const crudHandlers = {
+            courses: {
+                title: "Khóa học", button: "addCourseBtn", color: "bg-teal-500 hover:bg-teal-600", listEl: "courseList",
+                form: () => `<label for="name" class="block">Tên Khóa học (VD: K62)</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required>`,
+                renderItem: (item) => `<span>${item.name}</span>`,
+                buildItem: (data) => ({ name: data.get('name') })
+            },
+            faculties: {
+                title: "Khoa", button: "addFacultyBtn", color: "bg-blue-500 hover:bg-blue-600", listEl: "facultyList",
+                form: () => `<label for="name" class="block">Tên Khoa</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required>`,
+                renderItem: (item) => `<span>${item.name}</span>`,
+                buildItem: (data) => ({ name: data.get('name') })
+            },
+            rooms: {
+                title: "Phòng học", button: "addRoomBtn", color: "bg-yellow-500 hover:bg-yellow-600", listEl: "roomList",
+                form: () => `<div><label for="name" class="block">Tên Phòng (VD: 301-A2)</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required></div><div><label for="capacity" class="block">Sức chứa</label><input type="number" name="capacity" id="capacity" min="1" class="mt-1 w-full p-2 border rounded-md" required></div>`,
+                renderItem: (item) => `<span>${item.name} (Sức chứa: ${item.capacity})</span>`,
+                buildItem: (data) => ({ name: data.get('name'), capacity: parseInt(data.get('capacity')) })
+            },
+            teachers: {
+                title: "Giáo viên", button: "addTeacherBtn", color: "bg-green-500 hover:bg-green-600", listEl: "teacherList",
+                form: () => {
+                    if (!faculties.length) return '<p class="text-red-500">Cần tạo Khoa trước.</p>';
+                    const opts = faculties.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+                    return `<div><label for="name" class="block">Tên Giáo viên</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required></div><div><label for="phone" class="block">Số điện thoại</label><input type="tel" name="phone" id="phone" class="mt-1 w-full p-2 border rounded-md"></div><div><label for="facultyId" class="block">Thuộc Khoa</label><select name="facultyId" id="facultyId" class="mt-1 w-full p-2 border rounded-md">${opts}</select></div>`;
+                },
+                renderItem: (item) => {
+                    const faculty = faculties.find(f => f.id === item.facultyId);
+                    return `<div><p class="font-medium">${item.name}</p><p class="text-sm text-gray-500">${item.phone || 'Chưa có SĐT'} - ${faculty ? faculty.name : 'N/A'}</p></div>`;
+                },
+                buildItem: (data) => ({ name: data.get('name'), phone: data.get('phone'), facultyId: data.get('facultyId') })
+            },
+            subjects: {
+                title: "Môn học", button: "addSubjectBtn", color: "bg-purple-500 hover:bg-purple-600", listEl: "subjectList",
+                form: () => {
+                    if (!faculties.length) return '<p class="text-red-500">Cần tạo Khoa trước.</p>';
+                    const opts = faculties.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+                    return `<div><label for="name" class="block">Tên Môn học</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required></div><div><label for="credits" class="block">Số tín chỉ</label><input type="number" name="credits" id="credits" min="1" class="mt-1 w-full p-2 border rounded-md" required></div><div><label for="facultyId" class="block">Thuộc Khoa</label><select name="facultyId" id="facultyId" class="mt-1 w-full p-2 border rounded-md">${opts}</select></div>`;
+                },
+                renderItem: (item) => {
+                    const faculty = faculties.find(f => f.id === item.facultyId);
+                    return `<div><p class="font-medium">${item.name}</p><p class="text-sm text-gray-500">${item.credits} tín chỉ - ${faculty ? faculty.name : 'N/A'}</p></div>`;
+                },
+                buildItem: (data) => ({ name: data.get('name'), credits: parseInt(data.get('credits')), facultyId: data.get('facultyId') })
+            },
+            classes: {
+                title: "Lớp học", button: "addClassBtn", color: "bg-red-500 hover:bg-red-600", listEl: "classList",
+                form: () => {
+                    if (!subjects.length || !teachers.length || !courses.length) return '<p class="text-red-500">Cần tạo Khóa học, Môn học và Giáo viên trước.</p>';
+                    const subjectOpts = subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                    const teacherOpts = teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                    const courseOpts = courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    return `<div><label for="name" class="block">Tên Lớp học (VD: Lập trình Web - 01)</label><input type="text" name="name" id="name" class="mt-1 w-full p-2 border rounded-md" required></div><div><label for="subjectId" class="block">Môn học</label><select name="subjectId" id="subjectId" class="mt-1 w-full p-2 border rounded-md">${subjectOpts}</select></div><div><label for="teacherId" class="block">Giáo viên</label><select name="teacherId" id="teacherId" class="mt-1 w-full p-2 border rounded-md">${teacherOpts}</select></div><div><label for="courseId" class="block">Khóa học</label><select name="courseId" id="courseId" class="mt-1 w-full p-2 border rounded-md">${courseOpts}</select></div><div><label for="studentCount" class="block">Sĩ số</label><input type="number" name="studentCount" id="studentCount" min="1" class="mt-1 w-full p-2 border rounded-md" required></div><div class="mt-2 p-2 bg-yellow-100 text-yellow-800 text-sm rounded-md">Chức năng nhập sĩ số từ Excel sẽ được phát triển trong tương lai.</div>`;
+                },
+                renderItem: (item) => {
+                    const subject = subjects.find(s => s.id === item.subjectId);
+                    const teacher = teachers.find(t => t.id === item.teacherId);
+                    return `<div><p class="font-medium">${item.name}</p><p class="text-sm text-gray-500">${subject ? subject.name : 'N/A'} - GV: ${teacher ? teacher.name : 'N/A'}</p></div>`;
+                },
+                buildItem: (data) => ({ name: data.get('name'), subjectId: data.get('subjectId'), teacherId: data.get('teacherId'), courseId: data.get('courseId'), studentCount: parseInt(data.get('studentCount')) })
+            }
+        };
+
+        function setupCrud(type) {
+            const config = crudHandlers[type];
+            document.getElementById(config.button).onclick = () => {
+                const formHtml = config.form();
+                openModal(`Thêm ${config.title}`, formHtml, config.color, async (formData) => {
+                    const itemData = config.buildItem(formData);
+                    // FIX: Removed faulty validation that prevented string inputs like "K26".
+                    await addDoc(collection(db, getCollectionPath(type)), itemData);
+                });
+            };
+        }
+
+        function renderList(type) {
+            const config = crudHandlers[type];
+            const data = window[type];
+            const el = document.getElementById(config.listEl);
+            if (!data) { el.innerHTML = `<p class="text-gray-400 text-sm">Đang tải...</p>`; return; }
+            el.innerHTML = data.length ? data.map(item => `<div class="flex justify-between items-center p-2 bg-gray-50 rounded-md text-sm"><div class="flex-grow pr-2">${config.renderItem(item)}</div><div class="flex-shrink-0"><button onclick="window.editItem('${type}', '${item.id}')" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteItem('${type}', '${item.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></div></div>`).join('') : `<p class="text-gray-400 text-sm">Chưa có dữ liệu.</p>`;
+        }
+        
+        window.editItem = (type, id) => {
+            currentEditId = id;
+            const config = crudHandlers[type];
+            const item = window[type].find(i => i.id === id);
+            if (!item) { console.error(`Không tìm thấy mục với id ${id} trong ${type}`); showNotification('Không tìm thấy mục cần sửa.', 'error'); return; }
+            let formHtml = config.form();
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = formHtml;
+            Object.keys(item).forEach(key => {
+                const input = tempDiv.querySelector(`[name="${key}"]`);
+                if (input) {
+                    if (input.tagName === 'SELECT') {
+                        const opt = Array.from(input.options).find(o => o.value === item[key]);
+                        if(opt) opt.selected = true;
+                    } else { input.value = item[key]; }
+                }
+            });
+            formHtml = tempDiv.innerHTML;
+            openModal(`Chỉnh sửa ${config.title}`, formHtml, config.color, async (formData) => {
+                const updatedData = config.buildItem(formData);
+                await updateDoc(doc(db, getDocPath(type, id)), updatedData);
+            });
+        };
+
+        window.deleteItem = (type, id) => {
+            showConfirmation(`Bạn có chắc chắn muốn xóa mục này?`, async () => {
+                await deleteDoc(doc(db, getDocPath(type, id)));
+            });
+        };
+
+        function loadAndListenData() {
+            if (!userId) return;
+            cleanupDataAndUI(); 
+            Object.keys(crudHandlers).forEach(type => {
+                setupCrud(type);
+                const q = query(collection(db, getCollectionPath(type)));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    window[type] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    Object.keys(crudHandlers).forEach(t => renderList(t));
+                });
+                listeners.push(unsubscribe);
+            });
+        }
+
+        // --- LOGIC TẠO LỊCH BIỂU ---
+        document.getElementById('generateScheduleBtn').onclick = () => {
+            const startDateInput = document.getElementById('startDate').value;
+            if (!startDateInput) { showNotification('Vui lòng chọn ngày bắt đầu.', 'error'); return; }
+            if (!classes.length || !teachers.length || !rooms.length) { showNotification('Cần có dữ liệu Lớp học, Giáo viên và Phòng học để tạo lịch.', 'error'); return; }
+            const schedule = generateWeeklySchedule();
+            renderSchedule(schedule, new Date(startDateInput));
+        };
+
+        function generateWeeklySchedule() {
+            const teacherSchedule = {}; const roomSchedule = {}; const scheduleResult = [];
+            const timeSlots = [];
+            for (let day = 0; day < 6; day++) { timeSlots.push({ day, startPeriod: 1 }); timeSlots.push({ day, startPeriod: 6 }); }
+            const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
+            for (const c of shuffledClasses) {
+                const subject = subjects.find(s => s.id === c.subjectId);
+                if (!subject) continue;
+                const periods = subject.credits; const teacherId = c.teacherId;
+                const suitableRooms = rooms.filter(r => r.capacity >= c.studentCount).sort(() => Math.random() - 0.5);
+                if (!suitableRooms.length) continue;
+                let scheduled = false;
+                const shuffledTimeSlots = [...timeSlots].sort(() => Math.random() - 0.5);
+                for (const room of suitableRooms) {
+                    if (scheduled) break;
+                    for (const slot of shuffledTimeSlots) {
+                        const { day, startPeriod } = slot; let isConflict = false;
+                        for (let p = 0; p < periods; p++) {
+                            const periodKey = `${day}_${startPeriod + p}`;
+                            if ((teacherSchedule[teacherId] && teacherSchedule[teacherId][periodKey]) || (roomSchedule[room.id] && roomSchedule[room.id][periodKey])) { isConflict = true; break; }
+                        }
+                        if (!isConflict) {
+                            scheduleResult.push({ classId: c.id, roomId: room.id, day, startPeriod, periods });
+                            if (!teacherSchedule[teacherId]) teacherSchedule[teacherId] = {};
+                            if (!roomSchedule[room.id]) roomSchedule[room.id] = {};
+                            for (let p = 0; p < periods; p++) {
+                                const periodKey = `${day}_${startPeriod + p}`;
+                                teacherSchedule[teacherId][periodKey] = true;
+                                roomSchedule[room.id][periodKey] = true;
+                            }
+                            scheduled = true; break;
+                        }
+                    }
+                }
+            }
+            return scheduleResult;
+        }
+
+        function renderSchedule(schedule, startDate) {
+            const container = document.getElementById('scheduleContainer');
+            if (!schedule.length) { container.innerHTML = '<p class="text-center text-red-500 py-10">Không thể tạo lịch biểu với các ràng buộc hiện tại.</p>'; return; }
+            const daysOfWeek = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+            let tableHtml = `<table class="w-full border-collapse border border-gray-300 text-center"><thead><tr class="bg-gray-200"><th class="border border-gray-300 p-2">Buổi</th>`;
+            daysOfWeek.forEach((day, index) => {
+                const date = new Date(startDate); date.setDate(startDate.getDate() + index);
+                tableHtml += `<th class="border border-gray-300 p-2">${day}<br><span class="font-normal text-sm">${date.toLocaleDateString('vi-VN')}</span></th>`;
+            });
+            tableHtml += `</tr></thead><tbody>`;
+            ['Sáng', 'Chiều'].forEach(session => {
+                const isMorning = session === 'Sáng';
+                tableHtml += `<tr><td class="border border-gray-300 p-2 font-semibold ${isMorning ? 'bg-blue-50' : 'bg-orange-50'}">${session}</td>`;
+                for (let day = 0; day < 6; day++) {
+                    const dayClasses = schedule.filter(c => c.day === day && (isMorning ? c.startPeriod < 6 : c.startPeriod >= 6));
+                    tableHtml += `<td class="border border-gray-300 p-2 align-top table-cell">`;
+                    dayClasses.forEach(c => {
+                        const classInfo = classes.find(ci => ci.id === c.classId);
+                        const subject = subjects.find(s => s.id === classInfo?.subjectId);
+                        const teacher = teachers.find(t => t.id === classInfo?.teacherId);
+                        const room = rooms.find(r => r.id === c.roomId);
+                        tableHtml += `<div class="bg-${isMorning ? 'blue' : 'orange'}-100 text-${isMorning ? 'blue' : 'orange'}-800 p-2 rounded-md mb-2 text-left text-xs"><p class="font-bold">${classInfo?.name || 'N/A'}</p><p><i class="fas fa-book-open w-4 mr-1"></i> ${subject?.name || 'N/A'}</p><p><i class="fas fa-chalkboard-teacher w-4 mr-1"></i> ${teacher?.name || 'N/A'}</p><p><i class="fas fa-map-marker-alt w-4 mr-1"></i> ${room?.name || 'N/A'}</p><p><i class="fas fa-clock w-4 mr-1"></i> Tiết ${c.startPeriod}-${c.startPeriod + c.periods - 1}</p></div>`;
+                    });
+                    tableHtml += `</td>`;
+                }
+                tableHtml += `</tr>`;
+            });
+            tableHtml += `</tbody></table>`;
+            container.innerHTML = tableHtml;
+        }
+
+    </script>
+</body>
+</html>
