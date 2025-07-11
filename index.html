@@ -293,7 +293,8 @@
         }
 
         function showConfirmation(message, onConfirm) {
-            notificationMessage.innerHTML = `
+            notificationMessage.textContent = message;
+            notificationActions.innerHTML = `
                 <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg mr-2" onclick="window.closeNotification()">Hủy</button>
                 <button id="confirmBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Xác nhận</button>
             `;
@@ -380,7 +381,6 @@
                 const formHtml = config.form();
                 openModal(`Thêm ${config.title}`, formHtml, config.color, async (formData) => {
                     const itemData = config.buildItem(formData);
-                    // FIX: Removed faulty validation that prevented string inputs like "K26".
                     await addDoc(collection(db, getCollectionPath(type)), itemData);
                 });
             };
@@ -388,7 +388,17 @@
 
         function renderList(type) {
             const config = crudHandlers[type];
-            const data = window[type];
+            // FIX: Get the correct data array based on type
+            let data;
+            switch (type) {
+                case 'courses': data = courses; break;
+                case 'faculties': data = faculties; break;
+                case 'rooms': data = rooms; break;
+                case 'teachers': data = teachers; break;
+                case 'subjects': data = subjects; break;
+                case 'classes': data = classes; break;
+                default: data = [];
+            }
             const el = document.getElementById(config.listEl);
             if (!data) { el.innerHTML = `<p class="text-gray-400 text-sm">Đang tải...</p>`; return; }
             el.innerHTML = data.length ? data.map(item => `<div class="flex justify-between items-center p-2 bg-gray-50 rounded-md text-sm"><div class="flex-grow pr-2">${config.renderItem(item)}</div><div class="flex-shrink-0"><button onclick="window.editItem('${type}', '${item.id}')" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteItem('${type}', '${item.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></div></div>`).join('') : `<p class="text-gray-400 text-sm">Chưa có dữ liệu.</p>`;
@@ -397,7 +407,18 @@
         window.editItem = (type, id) => {
             currentEditId = id;
             const config = crudHandlers[type];
-            const item = window[type].find(i => i.id === id);
+            // FIX: Get the correct data array to find the item
+            let data;
+            switch (type) {
+                case 'courses': data = courses; break;
+                case 'faculties': data = faculties; break;
+                case 'rooms': data = rooms; break;
+                case 'teachers': data = teachers; break;
+                case 'subjects': data = subjects; break;
+                case 'classes': data = classes; break;
+                default: data = [];
+            }
+            const item = data.find(i => i.id === id);
             if (!item) { console.error(`Không tìm thấy mục với id ${id} trong ${type}`); showNotification('Không tìm thấy mục cần sửa.', 'error'); return; }
             let formHtml = config.form();
             const tempDiv = document.createElement('div');
@@ -431,7 +452,17 @@
                 setupCrud(type);
                 const q = query(collection(db, getCollectionPath(type)));
                 const unsubscribe = onSnapshot(q, (snapshot) => {
-                    window[type] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const dataArray = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // FIX: Update the correct module-scoped variable instead of window[type]
+                    switch (type) {
+                        case 'courses': courses = dataArray; break;
+                        case 'faculties': faculties = dataArray; break;
+                        case 'rooms': rooms = dataArray; break;
+                        case 'teachers': teachers = dataArray; break;
+                        case 'subjects': subjects = dataArray; break;
+                        case 'classes': classes = dataArray; break;
+                    }
+                    // Re-render all lists because of dependencies
                     Object.keys(crudHandlers).forEach(t => renderList(t));
                 });
                 listeners.push(unsubscribe);
